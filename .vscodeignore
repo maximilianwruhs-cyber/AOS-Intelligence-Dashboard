@@ -1,0 +1,25 @@
+# ─── Source code (not needed in VSIX — esbuild bundles to dist/) ─────────────
+src/
+webview/
+tsconfig.json
+
+# ─── Development & project files ─────────────────────────────────────────────
+_archive/
+.vscode/
+.git/
+.gitignore
+.gemini/
+.agents/
+_agents/
+node_modules/
+*.ts
+*.map
+
+# ─── Docs (exclude all except README which vsce requires) ────────────────────
+CHANGELOG.md
+
+# ─── Ensure dist/ is always included ─────────────────────────────────────────
+!dist/**
+!resources/**
+!README.md
+!package.json

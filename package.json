@@ -1,0 +1,110 @@
+{
+  "name": "aos-telemetry",
+  "displayName": "AOS Intelligence Dashboard",
+  "description": "Hardware-Souveränität und GZMO-Telemetrie für AgenticOS — Echtzeit-Energiemonitor und LLM-Leaderboard direkt in VS Codium.",
+  "version": "0.1.0",
+  "publisher": "maximilianwruhs",
+  "license": "MIT",
+  "icon": "resources/aos-icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maximilianwruhs/aos-telemetry"
+  },
+  "homepage": "https://github.com/maximilianwruhs/aos-telemetry#readme",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Visualization"
+  ],
+  "keywords": [
+    "AI",
+    "LLM",
+    "telemetry",
+    "energy",
+    "benchmark"
+  ],
+  "activationEvents": [
+    "onView:aos.sidebarView",
+    "onCommand:aos.openBenchmarkWizard",
+    "onCommand:aos.openLeaderboard",
+    "onCommand:aos.refreshDashboard"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aos-explorer",
+          "title": "AOS Telemetry",
+          "icon": "resources/aos-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "aos-explorer": [
+        {
+          "type": "webview",
+          "id": "aos.sidebarView",
+          "name": "Intelligence Dashboard",
+          "icon": "resources/aos-icon.svg",
+          "contextualTitle": "AOS Telemetry"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "aos.openBenchmarkWizard",
+        "title": "AOS: Open Benchmark Wizard",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "aos.openLeaderboard",
+        "title": "AOS: Open Model Leaderboard"
+      },
+      {
+        "command": "aos.refreshDashboard",
+        "title": "AOS: Refresh Dashboard"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "aos.openBenchmarkWizard",
+          "when": "true"
+        },
+        {
+          "command": "aos.openLeaderboard",
+          "when": "true"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "npm run build:ext && npm run build:webview && npm run build:wizard && npm run build:leaderboard",
+    "build:ext": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "build:webview": "esbuild ./webview/sidebar/sidebar.ts --bundle --outfile=dist/webview/sidebar.js --format=iife --platform=browser",
+    "build:wizard": "esbuild ./webview/wizard/wizard.ts --bundle --outfile=dist/webview/wizard.js --format=iife --platform=browser",
+    "build:leaderboard": "esbuild ./webview/leaderboard/leaderboard.ts --bundle --outfile=dist/webview/leaderboard.js --format=iife --platform=browser",
+    "watch": "concurrently \"npm run watch:ext\" \"npm run watch:webview\" \"npm run watch:wizard\" \"npm run watch:leaderboard\"",
+    "watch:ext": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch",
+    "watch:webview": "esbuild ./webview/sidebar/sidebar.ts --bundle --outfile=dist/webview/sidebar.js --format=iife --platform=browser --watch",
+    "watch:wizard": "esbuild ./webview/wizard/wizard.ts --bundle --outfile=dist/webview/wizard.js --format=iife --platform=browser --watch",
+    "watch:leaderboard": "esbuild ./webview/leaderboard/leaderboard.ts --bundle --outfile=dist/webview/leaderboard.js --format=iife --platform=browser --watch",
+    "package": "npm run build && npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.18.1",
+    "@vscode/vsce": "^3.7.1",
+    "concurrently": "^9.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "ws": "^8.20.0"
+  }
+}
