@@ -8,9 +8,9 @@
   "icon": "resources/aos-icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maximilianwruhs/aos-telemetry"
+    "url": "https://github.com/maximilianwruhs-cyber/AOS-Intelligence-Dashboard"
   },
-  "homepage": "https://github.com/maximilianwruhs/aos-telemetry#readme",
+  "homepage": "https://github.com/maximilianwruhs-cyber/AOS-Intelligence-Dashboard#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
