@@ -27,10 +27,7 @@
     "benchmark"
   ],
   "activationEvents": [
-    "onView:aos.sidebarView",
-    "onCommand:aos.openBenchmarkWizard",
-    "onCommand:aos.openLeaderboard",
-    "onCommand:aos.refreshDashboard"
+    "*"
   ],
   "main": "./dist/extension.js",
   "contributes": {

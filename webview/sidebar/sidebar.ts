@@ -52,7 +52,7 @@ window.addEventListener('message', (event) => {
                 statusDot.className = 'status-badge';
                 offlineBanner.style.display = 'none';
 
-                modelDisplay.textContent = data.model || data.active_model || 'Unknown';
+                modelDisplay.textContent = data.current_model || data.model || 'Unknown';
 
                 // FIX #9: Reset to defaults first, then conditionally update
                 energyDisplay.textContent = '— J/req';
@@ -76,8 +76,9 @@ window.addEventListener('message', (event) => {
                             : 'metric-value';
                 }
 
-                if (data.price_ct_kwh !== undefined) {
-                    oblDisplay.textContent = `${Number(data.price_ct_kwh).toFixed(1)} ct/kWh`;
+                if (data.obl_price_at_request !== undefined || data.price_ct_kwh !== undefined) {
+                    const price = data.price_ct_kwh ?? data.obl_price_at_request ?? 0;
+                    oblDisplay.textContent = `${Number(price).toFixed(1)} ct/kWh`;
                 }
 
             } else if (data.status === 'error') {

@@ -7,9 +7,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 let gatewayTerminal: vscode.Terminal | undefined;
+let healthInterval: NodeJS.Timeout | undefined;
 
 function findAosRoot(): string {
-    // 1. Check workspace folders
     const folders = vscode.workspace.workspaceFolders;
     if (folders) {
         for (const f of folders) {
@@ -17,7 +17,6 @@ function findAosRoot(): string {
             if (fs.existsSync(candidate)) { return f.uri.fsPath; }
         }
     }
-    // 2. Fallback to known path
     const fallback = path.join(
         process.env.HOME || '/home/maximilian-wruhs',
         'Dokumente', 'Playground', 'AOS'
@@ -28,16 +27,41 @@ function findAosRoot(): string {
 export function activate(context: vscode.ExtensionContext) {
     console.log('⚡ AOS Intelligence Dashboard activated.');
 
-    // ─── 1. Native Status Bar Item (always visible) ─────────────────────────
+    // ─── 1. Native Status Bar Item ──────────────────────────────────────────
     const statusBarItem = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Right,
         100
     );
-    statusBarItem.text = '$(pulse) AOS: Initializing…';
-    statusBarItem.tooltip = 'AOS Intelligence Dashboard';
+    statusBarItem.text = '$(pulse) AOS: Offline';
+    statusBarItem.tooltip = 'AOS Intelligence Dashboard — Click to open sidebar';
     statusBarItem.command = 'workbench.view.extension.aos-explorer';
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
+
+    // Periodic status bar health check
+    async function updateStatusBar() {
+        try {
+            const resp = await fetch(`${AOS_BASE_URL}/health`, {
+                signal: AbortSignal.timeout(3000)
+            });
+            if (resp.ok) {
+                const data: any = await resp.json();
+                const model = data.current_model || 'unknown';
+                const short = model.length > 20 ? model.slice(0, 20) + '…' : model;
+                statusBarItem.text = `$(check) AOS: ${short}`;
+                statusBarItem.backgroundColor = undefined;
+            } else {
+                statusBarItem.text = '$(warning) AOS: Error';
+                statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+            }
+        } catch {
+            statusBarItem.text = '$(circle-slash) AOS: Offline';
+            statusBarItem.backgroundColor = undefined;
+        }
+    }
+
+    updateStatusBar();
+    healthInterval = setInterval(updateStatusBar, 10000); // every 10s
 
     // ─── 2. Sidebar Webview Provider ────────────────────────────────────────
     const sidebarProvider = new SidebarProvider(context.extensionUri, AOS_BASE_URL);
@@ -66,8 +90,11 @@ export function activate(context: vscode.ExtensionContext) {
             gatewayTerminal.sendText(cmd);
             gatewayTerminal.show(false);
 
-            // Auto-refresh sidebar after gateway boots
-            setTimeout(() => sidebarProvider.refresh(), 3000);
+            // Auto-refresh sidebar after gateway boots (5s for model detection)
+            setTimeout(() => {
+                sidebarProvider.refresh();
+                updateStatusBar();
+            }, 5000);
 
             vscode.window.onDidCloseTerminal(t => {
                 if (t === gatewayTerminal) { gatewayTerminal = undefined; }
@@ -83,8 +110,11 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('aos.refreshDashboard', () => {
             sidebarProvider.refresh();
+            updateStatusBar();
         })
     );
 }
 
-export function deactivate() {}
+export function deactivate() {
+    if (healthInterval) { clearInterval(healthInterval); }
+}
