@@ -51,6 +51,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         // IPC: Listen for messages from the Webview frontend
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
+                case 'startGateway':
+                    vscode.commands.executeCommand('aos.startGateway');
+                    break;
                 case 'refresh':
                     this._fetchAndPush();
                     break;
@@ -298,6 +301,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     <hr class="divider">
 
+    <button class="btn" id="btn-start-gw" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; font-weight: 700;">⚡ Start Gateway</button>
     <button class="btn" id="btn-benchmark">▶ Run Benchmark</button>
     <button class="btn btn-secondary" id="btn-switch">🔄 Switch Model</button>
     <button class="btn btn-secondary" id="btn-leaderboard">📈 Open Leaderboard</button>

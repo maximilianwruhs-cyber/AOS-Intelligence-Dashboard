@@ -56,6 +56,10 @@
     },
     "commands": [
       {
+        "command": "aos.startGateway",
+        "title": "AOS: Start Gateway"
+      },
+      {
         "command": "aos.openBenchmarkWizard",
         "title": "AOS: Open Benchmark Wizard",
         "icon": "$(beaker)"

@@ -19,6 +19,10 @@ const zscoreDisplay = document.getElementById('zscore-display')!;
 const oblDisplay = document.getElementById('obl-display')!;
 
 // ─── Button Handlers ─────────────────────────────────────────────────────────
+document.getElementById('btn-start-gw')!.addEventListener('click', () => {
+    vscode.postMessage({ type: 'startGateway' });
+});
+
 document.getElementById('btn-benchmark')!.addEventListener('click', () => {
     vscode.postMessage({ type: 'runBenchmark' });
 });
