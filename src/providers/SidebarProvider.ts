@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { TelemetryService } from '../services/TelemetryService';
 import { getNonce } from '../utils/nonce';
 import { HTTP_TIMEOUT_MS } from '../config/constants';
 
@@ -21,8 +20,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
-        private readonly _aosBaseUrl: string,
-        private readonly _telemetryService: TelemetryService
+        private readonly _aosBaseUrl: string
     ) {}
 
     /**
@@ -76,9 +74,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         // Initial data fetch
         this._fetchAndPush();
-
-        // Attach webview to WebSocket telemetry stream
-        this._telemetryService.attachWebview(webviewView.webview);
     }
 
     /**
