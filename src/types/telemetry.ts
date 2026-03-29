@@ -1,6 +1,6 @@
 // ─── Shared Type Definitions for AOS Telemetry ──────────────────────────────
 
-/** Payload received from the WebSocket telemetry stream */
+/** Payload received from the health endpoint */
 export interface TelemetryPayload {
     model_id: string;
     joules_per_request: number;
@@ -12,8 +12,8 @@ export interface TelemetryPayload {
 
 /** Request body for the benchmark runner API */
 export interface BenchmarkRequest {
-    suite: string;       // e.g. "math_algorithmic", "code_gen", "full_baseline"
-    routing: string;     // e.g. "auto", "local_egpu", "cloud_h100"
+    suite: string;       // e.g. "math", "code", "standard", "full"
+    model?: string;      // optional — defaults to currently loaded model
 }
 
 /** Single row in the model leaderboard */
@@ -23,4 +23,6 @@ export interface LeaderboardEntry {
     joules_per_request: number;
     quality_score: number;
     efficiency_class: string;
+    eval_runs?: number;
+    total_runs?: number;
 }

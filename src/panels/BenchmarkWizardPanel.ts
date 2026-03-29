@@ -33,7 +33,7 @@ export class BenchmarkWizardPanel {
         );
     }
 
-    private async executeBenchmarkCall(suite: string, routing: string) {
+    private async executeBenchmarkCall(suite: string, _routing: string) {
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: `AOS: Obolus Suite '${suite}' running...`,
@@ -47,22 +47,24 @@ export class BenchmarkWizardPanel {
             });
 
             try {
-                // Native fetch is available in VS Codium Node 18+
                 const response = await fetch(`${AOS_BASE_URL}/v1/benchmark/run`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ suite, routing } as BenchmarkRequest),
+                    body: JSON.stringify({ suite } as BenchmarkRequest),
                     signal: abortController.signal
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status}`);
+                    const err: any = await response.json().catch(() => ({}));
+                    throw new Error(err.error || `HTTP ${response.status}`);
                 }
 
                 const result: any = await response.json();
 
                 this._panel.webview.postMessage({ command: 'updateProgress', progress: 100 });
-                vscode.window.showInformationMessage(`AOS Benchmark completed! Score: ${result.score}`);
+                vscode.window.showInformationMessage(
+                    `AOS Benchmark: ${result.model} | Quality: ${(result.score * 100).toFixed(1)}% | z: ${result.z_score.toFixed(4)} | ${result.total_joules.toFixed(1)}J`
+                );
 
             } catch (error: any) {
                 if (error.name === 'AbortError') {
@@ -70,7 +72,7 @@ export class BenchmarkWizardPanel {
                     return; 
                 }
                 
-                vscode.window.showErrorMessage(`AOS Gateway error: ${error.message}`);
+                vscode.window.showErrorMessage(`AOS Benchmark: ${error.message}`);
                 this._panel.webview.postMessage({ command: 'updateProgress', progress: 0 }); 
             }
         });
@@ -139,9 +141,13 @@ export class BenchmarkWizardPanel {
                     <div class="form-group">
                         <label for="test-suite">Obolus Test Suite</label>
                         <select id="test-suite">
-                            <option value="math_algorithmic">Math & Algorithmic (High Complexity)</option>
-                            <option value="code_gen">Code Generation</option>
-                            <option value="full_baseline">Full System Baseline</option>
+                            <option value="standard">Standard (50 tasks — math, code, factual, reasoning)</option>
+                            <option value="full">Full (85 tasks — includes hard variants)</option>
+                            <option value="math">Math (15 tasks)</option>
+                            <option value="code">Code Generation (10 tasks)</option>
+                            <option value="factual">Factual (15 tasks)</option>
+                            <option value="reasoning">Reasoning (10 tasks)</option>
+                            <option value="hard">Hard Only (35 tasks)</option>
                         </select>
                     </div>
 
