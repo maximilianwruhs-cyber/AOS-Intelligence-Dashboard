@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getNonce } from '../utils/nonce';
 import { HTTP_TIMEOUT_MS } from '../config/constants';
+import { httpGet, httpPost } from '../utils/httpGet';
 
 /**
  * SidebarProvider — AOS Intelligence Dashboard
@@ -17,6 +18,7 @@ import { HTTP_TIMEOUT_MS } from '../config/constants';
  */
 export class SidebarProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
+    private _pollTimer?: ReturnType<typeof setInterval>;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -72,8 +74,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             }
         });
 
-        // Initial data fetch
+        // Initial data fetch + periodic polling
         this._fetchAndPush();
+        this._pollTimer = setInterval(() => this._fetchAndPush(), 10_000);
+
+        // Clean up timer when view is disposed
+        webviewView.onDidDispose(() => {
+            if (this._pollTimer) {
+                clearInterval(this._pollTimer);
+                this._pollTimer = undefined;
+            }
+        });
     }
 
     /**
@@ -81,23 +92,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      */
     private async _fetchAndPush() {
         try {
-            const response = await fetch(`${this._aosBaseUrl}/health`, {
-                signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
-            });
+            const response = await httpGet(`${this._aosBaseUrl}/health`, HTTP_TIMEOUT_MS);
 
             if (response.ok) {
                 const health = await response.json() as Record<string, unknown>;
+                console.log('[AOS] Health OK:', JSON.stringify(health));
                 this._view?.webview.postMessage({
                     type: 'update',
-                    data: { status: 'online', ...health }
+                    data: { ...health, status: 'online' }
                 });
             } else {
+                console.warn(`[AOS] Health endpoint returned HTTP ${response.status}`);
                 this._view?.webview.postMessage({
                     type: 'update',
                     data: { status: 'error', message: `HTTP ${response.status}` }
                 });
             }
-        } catch {
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.stack || err.message : String(err);
+            console.error(`[AOS] _fetchAndPush FAILED: ${msg}`);
             this._view?.webview.postMessage({
                 type: 'update',
                 data: { status: 'offline' }
@@ -110,9 +123,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      */
     private async _showModelPicker() {
         try {
-            const response = await fetch(`${this._aosBaseUrl}/v1/models`, {
-                signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
-            });
+            const response = await httpGet(`${this._aosBaseUrl}/v1/models`, HTTP_TIMEOUT_MS);
             if (!response.ok) {
                 vscode.window.showErrorMessage('Could not fetch model list from AOS.');
                 return;
@@ -125,25 +136,41 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             });
 
             if (selected) {
-                // FIX #5: Actually send the switch request to the backend
+                // Instantly update UI to show swapping in progress
+                this._view?.webview.postMessage({
+                    type: 'update',
+                    data: { status: 'online', current_model: `🔄 Swapping to ${selected}...` }
+                });
+
+                // Send the switch request to the backend
                 try {
-                    const switchResponse = await fetch(`${this._aosBaseUrl}/v1/models/switch`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model_id: selected }),
-                        signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
-                    });
+                    vscode.window.showInformationMessage(`AOS: Switching to ${selected}... (VRAM swap in progress)`);
+                    const switchResponse = await httpPost(
+                        `${this._aosBaseUrl}/v1/models/switch`,
+                        { model_id: selected },
+                        60_000
+                    );
                     if (switchResponse.ok) {
-                        vscode.window.showInformationMessage(`AOS: Switched to ${selected}.`);
-                        this._fetchAndPush(); // Refresh dashboard with new model data
+                        const result = await switchResponse.json() as { model?: string; previous_model?: string };
+                        vscode.window.showInformationMessage(
+                            `AOS: Switched ${result.previous_model || '?'} → ${result.model || selected}`
+                        );
                     } else {
-                        vscode.window.showWarningMessage(`AOS: Model switch failed (HTTP ${switchResponse.status}).`);
+                        const err = await switchResponse.json().catch(() => ({ error: `HTTP ${switchResponse.status}` })) as { error?: string };
+                        vscode.window.showWarningMessage(`AOS: Model switch failed — ${err.error || switchResponse.status}`);
                     }
-                } catch {
-                    vscode.window.showWarningMessage(`AOS: Model switch request failed — is the endpoint implemented?`);
+                } catch (e: any) {
+                    if (e.message?.includes('timed out')) {
+                        vscode.window.showWarningMessage('AOS: Model switch timed out (60s). The swap may still be in progress.');
+                    } else {
+                        vscode.window.showWarningMessage(`AOS: Model switch request failed — ${e.message}`);
+                    }
+                } finally {
+                    this._fetchAndPush(); // Always refresh dashboard when done
                 }
             }
-        } catch {
+        } catch (err: unknown) {
+            console.error(`[AOS] Model picker failed: ${err instanceof Error ? err.message : String(err)}`);
             vscode.window.showErrorMessage('AOS Gateway not reachable.');
         }
     }
@@ -174,7 +201,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             color: var(--vscode-sideBar-foreground);
             font-family: var(--vscode-font-family);
             font-size: var(--vscode-font-size);
-            padding: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            height: 100vh;
         }
 
         h2 {

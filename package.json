@@ -1,7 +1,7 @@
 {
   "name": "aos-telemetry",
   "displayName": "AOS Intelligence Dashboard",
-  "description": "Hardware-Souveränität und GZMO-Telemetrie für AgenticOS — Echtzeit-Energiemonitor und LLM-Leaderboard direkt in VS Codium.",
+  "description": "Hardware sovereignty and energy telemetry for AgenticOS — real-time energy monitor and LLM leaderboard directly in VS Codium.",
   "version": "0.1.0",
   "publisher": "maximilianwruhs",
   "license": "MIT",
@@ -84,11 +84,12 @@
     }
   },
   "scripts": {
-    "build": "npm run build:ext && npm run build:webview && npm run build:wizard && npm run build:leaderboard",
+    "build": "npm run build:ext && npm run build:webview && npm run build:wizard && npm run build:leaderboard && npm run deploy",
     "build:ext": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
     "build:webview": "esbuild ./webview/sidebar/sidebar.ts --bundle --outfile=dist/webview/sidebar.js --format=iife --platform=browser",
     "build:wizard": "esbuild ./webview/wizard/wizard.ts --bundle --outfile=dist/webview/wizard.js --format=iife --platform=browser",
     "build:leaderboard": "esbuild ./webview/leaderboard/leaderboard.ts --bundle --outfile=dist/webview/leaderboard.js --format=iife --platform=browser",
+    "deploy": "cp -r dist/* ~/.vscode-oss/extensions/maximilianwruhs.aos-telemetry-0.1.0/dist/ && echo '✅ Deployed to installed extension'",
     "watch": "concurrently \"npm run watch:ext\" \"npm run watch:webview\" \"npm run watch:wizard\" \"npm run watch:leaderboard\"",
     "watch:ext": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch",
     "watch:webview": "esbuild ./webview/sidebar/sidebar.ts --bundle --outfile=dist/webview/sidebar.js --format=iife --platform=browser --watch",

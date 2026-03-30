@@ -3,6 +3,7 @@ import { SidebarProvider } from './providers/SidebarProvider';
 import { BenchmarkWizardPanel } from './panels/BenchmarkWizardPanel';
 import { LeaderboardPanel } from './panels/LeaderboardPanel';
 import { AOS_BASE_URL } from './config/constants';
+import { httpGet } from './utils/httpGet';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -41,9 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Periodic status bar health check
     async function updateStatusBar() {
         try {
-            const resp = await fetch(`${AOS_BASE_URL}/health`, {
-                signal: AbortSignal.timeout(3000)
-            });
+            const resp = await httpGet(`${AOS_BASE_URL}/health`, 3000);
             if (resp.ok) {
                 const data: any = await resp.json();
                 const model = data.current_model || 'unknown';
@@ -54,7 +53,8 @@ export function activate(context: vscode.ExtensionContext) {
                 statusBarItem.text = '$(warning) AOS: Error';
                 statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             }
-        } catch {
+        } catch (err: unknown) {
+            console.error(`[AOS] Status bar health check failed: ${err instanceof Error ? err.message : String(err)}`);
             statusBarItem.text = '$(circle-slash) AOS: Offline';
             statusBarItem.backgroundColor = undefined;
         }

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { getNonce } from '../utils/nonce';
 import { AOS_BASE_URL } from '../config/constants';
 import { BenchmarkRequest } from '../types/telemetry';
+import { httpPost } from '../utils/httpGet';
 
 export class BenchmarkWizardPanel {
     public static currentPanel: BenchmarkWizardPanel | undefined;
@@ -47,12 +48,11 @@ export class BenchmarkWizardPanel {
             });
 
             try {
-                const response = await fetch(`${AOS_BASE_URL}/v1/benchmark/run`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ suite } as BenchmarkRequest),
-                    signal: abortController.signal
-                });
+                const response = await httpPost(
+                    `${AOS_BASE_URL}/v1/benchmark/run`,
+                    { suite } as Record<string, unknown>,
+                    300_000 // 5 minute timeout for benchmarks
+                );
 
                 if (!response.ok) {
                     const err: any = await response.json().catch(() => ({}));
@@ -65,6 +65,8 @@ export class BenchmarkWizardPanel {
                 vscode.window.showInformationMessage(
                     `AOS Benchmark: ${result.model} | Quality: ${(result.score * 100).toFixed(1)}% | z: ${result.z_score.toFixed(4)} | ${result.total_joules.toFixed(1)}J`
                 );
+                // Auto-open leaderboard after successful benchmark
+                vscode.commands.executeCommand('aos.openLeaderboard');
 
             } catch (error: any) {
                 if (error.name === 'AbortError') {
@@ -89,7 +91,7 @@ export class BenchmarkWizardPanel {
                 {
                     enableScripts: true,
                     localResourceRoots: [extensionUri],
-                    retainContextWhenHidden: false,
+                    retainContextWhenHidden: true,
                 }
             );
             BenchmarkWizardPanel.currentPanel = new BenchmarkWizardPanel(panel, extensionUri);
@@ -129,14 +131,12 @@ export class BenchmarkWizardPanel {
                     select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); }
                     button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; cursor: pointer; }
                     button:hover { background: var(--vscode-button-hoverBackground); }
-                    .progress-bar { height: 10px; background: var(--vscode-widget-border); border-radius: 5px; overflow: hidden; margin-top: 10px; } /* FIX #2: removed display:none — container controls visibility */
-                    .progress-fill { height: 100%; background: var(--vscode-terminal-ansiGreen); width: 0%; transition: width 0.3s ease; }
                 </style>
             </head>
             <body>
                 <div class="wizard-container">
                     <h1>Obolus Benchmark Config</h1>
-                    <p>Definieren Sie die Hardware-Souveränität und Obolus-Test-Suites für die GZMO-Kalibrierung (Ubuntu 24.04).</p>
+                    <p>Configure the benchmark suite and hardware routing for Obolus calibration.</p>
 
                     <div class="form-group">
                         <label for="test-suite">Obolus Test Suite</label>
@@ -161,11 +161,6 @@ export class BenchmarkWizardPanel {
                     </div>
 
                     <button id="run-btn">Run Benchmark Suite</button>
-
-                    <div id="progress-container" class="form-group" style="display:none;">
-                        <label>Fortschritt</label>
-                        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-                    </div>
                 </div>
                 <script nonce="${nonce}" src="${scriptUri}"></script>
             </body>
